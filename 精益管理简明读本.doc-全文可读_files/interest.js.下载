@@ -1,0 +1,183 @@
+var detail_interest = {
+    $show: $('.detail .notice').length ? $('.detail .notice') : $('.detail .content'),
+    flag: {
+        interest: 0
+    },
+    data: {
+        list: []
+    },
+    init: function(){
+        var that = this;
+        $(window).on('scroll',that.scroll);
+    },
+    scroll: function(){
+        var that = detail_interest,
+            $interest = $('.detail .interest');
+        if( that.flag.interest == 0 ){
+            clearInterval(d);
+            var d = setTimeout(function(){
+                if( that.flag.interest == 0 && util.isShow(that.$show) && that.data.list.length == 0 && $interest.length == 0 ){
+                    that.flag.interest = 1;
+                    $(window).off('scroll',that.scroll);
+                    that.getList();
+                }
+            });
+        }
+    },
+    getList: function(){
+        var that = this,
+            $interest = $('.detail .interest'),
+            list = [];
+        if( $interest.length == 0 ){
+            $.ajax({
+                url: __OPEN_HOST__ + base.detail.url.interest.doc,
+                type: 'GET',
+                data: {
+                    project: 1, 
+                    aid: base.detail.aid
+                },
+                dataType: 'JSONP',
+                success: function (res) {
+                    if( res.status == 200 && res.data.length ){
+                        list = res.data;
+                    }
+                },
+                complete: function(){
+                    var limit = list.length ? Math.abs( list.length - 24 + 6 ) : 24;
+                    if( limit ){
+                        $.ajax({
+                            url: __ZIP_HOST__ + base.detail.url.interest.zip,
+                            type: 'GET',
+                            data: {
+                                keywords: encodeURIComponent(base.detail.title), 
+                                limit: limit
+                            },
+                            dataType: 'JSONP',
+                            success: function (res) {
+                                if( res.status == 1 && res.data.length ){
+                                    var zip_data = res.data;
+                                    // 前12条内随机混合4条
+                                    if( list.length >= 8 ){ 
+                                        var list_before = list.slice(0, 8),
+                                            list_after = list.slice(8,18),
+                                            zip_data_before = zip_data.slice(0,4),
+                                            zip_data_after = zip_data.slice(4,6);
+                                        Array.prototype.push.apply(list_before,zip_data_before);
+                                        Array.prototype.push.apply(list_after,zip_data_after);
+                                        list_before = util.randomArray(list_before);
+                                        list_after = util.randomArray(list_after);
+                                        list = list_before.concat(list_after);
+                                    }else{
+                                        Array.prototype.push.apply(list,zip_data);
+                                    }
+                                }
+                            },
+                            complete: function(){
+                                that.data.list = list;
+                                that.setList();
+                            }
+                        });
+                    }else{
+                        that.data.list = list;
+                        that.setList();
+                    }
+                }
+            });
+        }
+    },
+    setList: function(){
+        var that = this,
+            $interest = $('<div class="interest">'+
+                            '<div class="hd"><h3>您可能感兴趣</h3></div>'+
+                            '<div class="bd">'+ 
+                            (
+                                '<div class="mask '+((util.getIeVersion()<10&&util.getIeVersion()>0)?'gradient-bg':'gradient')+'">'+
+                                ((util.getIeVersion()<10&&util.getIeVersion()>0)?'<img src="'+__HOME_ROOT__+'/detail/images/gradient-bg.png" alt="背景图片" />':'')+
+                                '</div>'
+                            )+
+                                '<ul class="list"></ul>'+
+                            ( that.data.list.length > 12 ? 
+                                '<div class="more">'+
+                                    '<a id="btn_interest_toggle" class="btn btn-more" href="javascript:;" title="点击加载更多">点击加载更多</a>'+
+                                '</div>' :
+                                ''
+                            ) +
+                        '</div>');
+            $li = '';
+        if( that.data.list.length ){
+            for( var i = 0; i < that.data.list.length; i++ ){
+                $li += '<li'+ ( i >= 12 ? ' class="hide item"' : ' class="item"' ) +'>'+
+                            '<a href="'+ ( that.data.list[i].href || that.data.list[i].url ) +'" target="_blank" title="'+ that.data.list[i].title +'">'+
+                                ( typeof that.data.list[i].pagenumber != 'undefined' ? '<small class="page">'+ that.data.list[i].pagenumber +'P</small>' : '') +
+                                ( typeof that.data.list[i].son_num != 'undefined' ? '<small class="son">'+ that.data.list[i].son_num +'个子文件</small>' : '') +
+                                '<span class="cover">'+(util.getIeVersion()==7?'<span class="ie-mask"></span>':'')+'<img class="lazy" src="'+ __HOME_ROOT__ + '/images/lazy/load.png" data-src="'+ that.data.list[i].litpic +'" data-alt="'+ that.data.list[i].title +'"/></span>'+
+                                '<strong>' + that.data.list[i].title +'</strong>'+
+                            '</a>'+
+                        '</li>';
+            }
+            $interest.find('ul.list').html($li);
+            that.$show.after($interest);
+            that.lazy();
+            that.prependCorpus();
+        }
+        setTimeout( function(){
+            $interest.find('.btn-more').on('click',function(){
+                $interest.find('.mask').remove();
+                $interest.find('.more').remove();
+                $interest.find('.hide').attr('class','lazy');
+                that.lazy();
+            });
+            $('.interest ul.list > li > a').on('click',function(){
+                var zip_doc = $(this).find('small.son').length ? 'zip': 'doc',
+                    source = 'interest_' + zip_doc,
+                    _href = $(this).attr('href');
+                _href = _href.substr(0,4).toLocaleLowerCase() != 'http' ? window.location.origin + _href : _href;
+                owa.load(['setCvtRef', _href, 'interest'] );
+                owa.load(['trackAction', source, 'pc']);
+            });
+            owa.btn( $('#btn_interest_toggle'), 'btn_interest_toggle');
+        },100);
+    },
+    lazy: function(){
+        setTimeout(function(){
+            util.lazyImg({
+                parentSelector: '.interest'
+            });
+        },1000);
+    },
+    prependCorpus: function(){
+        var l = 0,
+            c = '',
+            $list = $('.interest ul.list'),
+            corpus = detail_corpus,
+            t = 0;
+        t = setInterval(function(){
+                if( corpus.status == 'COMPLETE' ){
+                    clearInterval(t);
+                    if( corpus.data.list.length ){
+                        c = '';
+                        for( var i = 0;i < 2; i++ ){
+                            if( corpus.data.list[i] ){
+                                c += '<li class="prepend-corpus">'+
+                                        '<a href="'+corpus.data.list[i].space_url+'" title="《'+corpus.data.list[i].label+'》的文档合集" target="_blank">'+
+                                            '<small class="tag">文集</small>' +
+                                            '<span class="cover">'+(util.getIeVersion()==7?'<span class="ie-mask"></span>':'')+'<img class="lazy" src="'+ __HOME_ROOT__ + '/images/lazy/load.png" data-src="//img.book118.com/sr1/M00/11/1C/wKh2AmBijSeIKKLJAAACRbkz-6gAAG0MwAd32sAAAJd959.png" data-alt="《'+corpus.data.list[i].label+'》的文档合集"/></span>'+
+                                            '<strong>《'+corpus.data.list[i].label+'》的文档合集</strong>'+
+                                        '</a>'+
+                                    '</li>';
+                                l++;
+                            }
+                        }
+                        $list.prepend(c);
+                        if( $list.find('.hide').length ){
+                            while( l > 0 ){
+                                $list.find('li.item').eq(12-l).addClass('hide');
+                                $list.find('li.item').eq(23-l).remove();
+                                l--;
+                            }
+                        }
+                    }
+                }
+            }, 300);
+    }
+};

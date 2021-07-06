@@ -1,0 +1,876 @@
+var operate_download = {
+	data: {
+        type: 'PAY', //PAY:支付成功 DOWN:下载成功
+        order_id: '',
+        link: '' //下载地址
+	},
+    operate_download_success: false,
+    init : function(){
+        var that = this;
+        $.ajax({
+            url: base.detail.url.download.init,
+            method: 'GET',
+            data: {
+                aid: base.detail.aid,
+                trans_type: 'downs'
+            },
+            beforeSend: function(){
+                that.data.type = 'PAY';
+                util.loading();
+            },
+            success: function( res ) {
+                switch(res.code){
+                    case 100: //未购买可生成购买订单
+                        operate_download_pay.init();
+                    break;
+                    case 200: //已经购买过
+                        util.loaded();
+                        that.data.type = 'DOWN';
+                        if( +base.detail.status.stand === 1 ){
+                            that.data.order_id = res.data.order_id;
+                            that.operate_download_success = false;
+                            that.getDownloadLink.stand();
+                        }else{
+                            that.data.link = res.data.url;
+                            that.download();
+                        }
+                    break;
+                    case 1001: //源文件不存在
+                        var t = '<dl class="source">'+
+                                    '<dt>源文件探测到可能丢失，系统自动拒绝您继续下载，该文档也无法预览。</dt>'+
+                                    '<dd>请点击旁边的相似标题文档,查看更多文档，或者<a class="btn-search" href="javascript:;" title="立即搜索">点击这里搜索</a></dd>'+
+                                '</dl>';
+                        that.forbid(t,function(layero, index){
+                            layero.find('a.btn-search').on('click',function(){
+                                layer.close(index);
+                                header_search.sub();
+                            });
+                        });
+                    break;
+                    case 1002: //电子书不支持下载
+                        var t = '出于版权维护，电子书不支持下载和全文阅读，谢谢您的理解与支持！';
+                        that.forbid(t);
+                    break;
+                    case 1003: //登录用户免费下载文档
+                        that.data.link = res.data.url;
+                        that.free();
+                    break;
+                    case 1004: //免费文档需登录再下载
+                        util.loaded();
+                        member.login({
+                            callback: function(){
+                                operate_download.init()
+                            }
+                        })
+                    break;
+                    case 1005: //上传用户不支持消费
+                        var t = '为了您的资金账户安全，本站上传者账号不支持文档消费。您可以注册新的账号或退出登录以游客身份下载该文档。谢谢您的理解与支持！';
+                        that.forbid(t);
+                    break;
+                    case 1006: //下载总次数达到上限
+                        var t = '已达到每日最大下载限制，请明日再来吧。';
+                        that.forbid(t);
+                    break;
+                    case 1007: //下载订单生成次数上限
+                        var t = '已达到每日最大下载限制，请明日再来吧。';
+                        that.forbid(t);
+                    break;
+                    case 1008: //一天只能下载5个不同文档！
+                        var t = '已达到每日最大下载限制，请明日再来吧。';
+                        that.forbid(t);
+                    break;
+                    case 1009: //自己下载自己文档需生成二维码时失败
+                        var t = '验证失败，请刷新页面二维码再次扫码验证！';
+                        that.forbid(t);
+                    break;
+                    case 1010: //下载自己的文档需要在公众号中进行确认
+                        util.loaded();
+                        operate_download_own.init(res.data);
+                    break;
+                    case 1099: //标准文档不能下载提示
+                        var t = '标准文档合作单位将于23:00-7:00（次日）之间进行服务器维护升级，维护升级期间暂不支持标准文档下载，请在其它时间段内下载。';
+                        that.forbid(t);
+                    break;
+                    default:
+                        util.loaded();
+                        layer.msg(res.message);
+                        break;
+                }
+            },
+            error: function(){
+                util.loaded();
+                layer.msg('请求错误！');
+            }
+        });
+    },
+    forbid: function(t,callback){
+        var c = '<div class="tip">'+ t+ '</div>'+
+                '<div class="btns">'+
+                    '<button type="button" class="btn btn-sub">我知道了</button>'+
+                '</div>';
+        util.loaded();
+        layer.open({
+            type: 1,
+            skin: 'layui-layer-alert',
+            title: '对不起，无法下载',
+            area: '480px',
+            content : c,
+            success: function(layero, index){
+                if( jQuery.isFunction( callback ) ){
+                    callback(layero, index);
+                }
+                layero.find('.btn-sub').on('click',function(){
+                    layer.close(index);
+                });
+            }
+        });
+    },
+    /*
+     * 免费文档下载
+     */
+    free: function(){
+        var that = this,
+            c = '<div class="tip">此文档为免费文档，无需支付购买，直接点击下方下载按钮保存至您的电脑，方便阅读！</div>'+
+                '<div class="btns">'+
+                    '<button type="button" class="btn-sub">立即下载</button>'+
+                '</div>';
+        util.loaded();
+        layer.open({
+            type: 1,
+            skin: 'layui-layer-alert',
+            title: '文档下载',
+            area: '480px',
+            content : c,
+            success: function(layero, index){
+                layero.find('.btn-sub').on('click',function(){
+                    layer.close(index);
+                    that.download();
+                });
+            }
+        });
+    },
+    download: function(){
+        var that = this;
+        if( that.data.link ) {
+            window.location.href = that.data.link;
+        }
+    },
+    reDownload: function(){
+        var that = operate_download;
+        if( that.data.link ){
+            window.location.href = that.data.link;
+        }else{
+            that.operate_download_success = false;
+            that.getDownloadLink.init();
+        }
+    },
+    success: function(){
+        var that = operate_download;
+        that.operate_download_success = true;
+        that.getDownloadLink.init();
+    },
+    getDownloadLink: {
+        data: {
+            company: ''
+        },
+        init: function(){
+            var that = this;
+            if( +base.detail.status.stand === 1 ){
+                if( that.data.company ){
+                    that.stand(that.data.company);
+                }else{
+                    that.company();
+                }
+            }else{
+                that.link();
+            }
+        },
+        stand: function(company){
+            var that = operate_download,
+                count = 0,
+                flag = 0,
+                t = 0,
+                d = 0,
+                doFun = function(doLayer){
+                    util.loaded();
+                    if ( doLayer && that.operate_download_success ){
+                        operate_download_success.init(that.data);
+                    }
+                },
+                doTimeout = function() {
+                    if( t ){
+                        clearTimeout(t);
+                    }
+                    t = setTimeout(function() {
+                        if( count < 15 ){
+                            if( flag === 0 ){
+                                $.ajax({
+                                    url: base.detail.url.download.stand,
+                                    method: 'GET',
+                                    data: {
+                                        order_no: that.data.order_id,
+                                        company: company,
+                                        auto: that.operate_download_success ? 0 : 1
+                                    },
+                                    beforeSend: function(){
+                                        count++;
+                                        flag = 1;
+                                    },
+                                    dataType: 'JSONP',
+                                    success: function ( res ) {
+                                        switch (res.code) {
+                                            case -1:
+                                            case 3:
+                                                util.msg(res.message);
+                                                doFun(1);
+                                                break;
+                                            case 1:
+                                                that.data.link = res.data.url;
+                                                that.download();
+                                                doFun(1);
+                                                break;
+                                            case 2:
+                                                d = 5000;
+                                                doTimeout();
+                                                break;
+                                            case 4:
+                                                that.company();
+                                                doFun(0);
+                                                break;
+                                            default:
+                                                break;
+                                        }
+                                    },
+                                    complete: function(){
+                                        flag = 0;
+                                    }
+                                });
+                            }
+                        }else{
+                            doFun(1);
+                            util.msg('获取下载链接失败');
+                        }
+                    },d);
+                };
+            util.loading('文档下载等待中，请稍候...');
+            doTimeout();
+        },
+        link: function(){
+            var that = operate_download;
+            $.ajax({
+                url: base.detail.url.download.link,
+                method: 'GET',
+                data: {
+                    aid: base.detail.aid,
+                    trans_type: 'downs',
+                    buyid: that.data.order_id
+                },
+                success: function ( res ) {
+                    if( res.code == 200 ){
+                        that.data.link = res.data.url;
+                        that.download();
+                    }else{
+                        util.msg('获取下载链接失败');
+                    }
+                },
+                complete: function(){
+                    if ( that.operate_download_success ){
+                        operate_download_success.init(that.data);
+                    }
+                }
+            });
+        },
+        company: function(){
+            var that = this,
+                c = '<form class="stand-company" id="form_stand_company">'+
+                        '<div class="tip">您购买的是正版标准文档，本网站应内容版权方【中国质量标准出版社】的版权保护防护要求，下载用户需留具单位简称用于下载文件生成授权专用水印（水印不可去掉、不可修改）：</div>'+
+                        '<dl class="form-group">'+
+                            '<dt><input type="text" class="form-control company-control" name="company" placeholder="请输入您所在的单位简称 (必填)" datatype="company" null="请输入您所在的单位简称" error="英文单位简称只能在6-30位字符之间，中文单位简称需6-30个汉字!"></dt>'+
+                            '<dd class="error"></dd>'+
+                        '</dl>'+
+                        '<div class="btns">'+
+                            '<button type="button" class="btn btn-sub" id="btn_stand_compnay_bind">提交下载</button>'+
+                        '</div>'+
+                    '</form>';
+            layer.open({
+                type: 1,
+                skin: 'layui-layer-stand-company',
+                area: '492px',
+                title: '提示',
+                closeBtn: 0,
+                content: c,
+                success: function(layero,index){
+                    util.valid({
+                        form: '#form_stand_company',
+                        btn: '#btn_stand_compnay_bind',
+                        datatypes: {
+                            'company': /^[\w\W]{6,30}$/
+                        },
+                        sub : function(data){
+                            that.data.company = data.company;
+                            that.stand(data.company);
+                            layer.close(index);
+                        }
+                    });
+                }
+            });
+        }
+    }
+};
+var operate_download_pay = {
+    version: '0.0.4',
+    data: {},
+    flag: {},
+    init: function(){
+        var that = this;
+        $.ajax({
+            url: base.detail.url.download.confirm,
+            method: 'GET',
+            data: {
+                aid: base.detail.aid,
+                trans_type: 'downs'
+            },
+            beforeSend: function(){
+                util.loading();
+            },
+            success: function ( res ) {
+                that.flag = res;
+                that.data = res.data || {};
+                switch( res.code ){
+                    case 201:
+                        that.visitorLayer();
+                        break;
+                    case 202:
+                        that.rechargeLayer();
+                        break;
+                    case 203:
+                        that.balanceLayer();
+                        break;
+                    case 204:
+                        layer.msg(res.data.message);
+                        break;
+                    default:
+                        layer.msg(res.message);
+                        break;
+                }
+            },
+            error: function(){
+                layer.msg('请求错误！');
+            },
+            complete: function(){
+                util.loaded();
+            }
+        });
+    },
+    /*
+    * 工具函数：文档信息
+    */
+    getInfo: function(){
+        var that = this;
+        return '<dl class="info">'+
+                    '<dt><i class="icon icon-format icon-format-'+that.data.doc_infos.filetype+'"></i> <span></span></dt>'+
+                    '<dd><small>文档大小：'+that.data.doc_infos.filesize+'</small><small>文档价格：'+that.data.price_infos.money_info.origin_money+'金币</small></dd>'+
+                '</dl>';
+    },
+    /*
+    * 工具函数：标签图：如双十一
+    */
+    setTag: function(){
+        if( base.detail.status.activity ){
+            var c = '<div class="tag"><img src="//file-1.book118.com/sr1/M00/03/3F/wKh2Al-qhfuIf4DAAAAFbgYy-RwAABj7gElbeQAAAWG623.png"></div>';
+            $('.layui-layer-pay .layui-layer-content').after(c);
+        }
+    },
+    /*
+    * 工具函数：特价金币
+    */
+    getMoney: function(){
+        //var that = this;
+        //     c = base.detail.status.activity ? '<div class="money">限时特价：<strong> ¥ '+ that.getRmb( that.data.price_infos.money_info.pay_money ) +' </strong> <del>原价'+ that.getRmb( that.data.price_infos.money_info.origin_money )+'元</del></div>' : '';
+        // owa.push(['setGlobalEventProperty','is_run_double_eleven', that.data.doc_infos.is_run_double_eleven]);
+        var that = this,
+            c = '<div class="money"><del>原价'+ that.getRmb( that.data.price_infos.money_info.origin_money * 1.11 )+'元</del> 限时特价：<small>扫码查看</small></div>';
+        owa.push(['setGlobalEventProperty','is_1_11_bei', '1.11']);
+        return c;
+    },
+    /*
+    * 工具函数：金币转人民币
+    */
+    getRmb: function(coin){
+        var r = coin / 10;
+        return ('' + r ).indexOf('.') == -1 ? r + '.00' : r.toFixed(2);
+    },
+    /*
+    * 工具函数：优惠信息
+    */
+    getDiscounts: function(){
+        var that = this,
+            c = '',
+            msgs = [];
+        if( that.data.price_infos.show_to_user && that.data.price_infos.show_to_user.info ){
+            for( var i = 0; i < that.data.price_infos.show_to_user.info.length; i++ ){
+                var msg = that.data.price_infos.show_to_user.info[i].msg;
+                msg = msg.replace('已支付','已支付<span>');
+                msg = msg.replace('折扣','折扣<span>');
+                msg = msg.replace('金币','</span>金币');
+                msgs.push( msg );
+            }
+            if( msgs.length ){
+                c += '<div class="discounts">'+ msgs.join('，')+'</div>';
+            }
+        }
+        return c;
+    },
+    getMethod: function(status){
+        var that = this,
+            m = [];
+        for( var i = 0; i < that.data.pay_config.length; i++ ){
+            switch(that.data.pay_config[i]){
+                case 'alipay':
+                    m.push('支付宝');
+                    break;
+                case 'weixin':
+                    m.push( status == 1 ? '微信(首次需授权登录)' : '微信');
+                break;
+            }
+        }
+        return m.length ? m.join('/') + '扫码' : '';
+    },
+    /*
+    * 工具函数：文档包含信息提示
+    */
+    setWarning: function(){
+        var that = this,
+            t = that.data.doc_infos.title,
+            m = '',
+            $w = $('<div class="warning">'+
+                    '<span class="icon-warning-triangle"></span>'+
+                    '<div class="panel">'+
+                        '<p></p>'+
+                        '<button type="button" class="btn-ok">我知道了</button>'+
+                    '</div>'+
+                '</div>'),
+            year = new Date().getFullYear(),
+            cs = [
+                { k: '图纸', m: '本文档标题中含“图纸”，但实际上由于本站不能上传图纸（只能上传office+pdf格式），因此无图可下载。' },
+                { k: '设计', m: '本文档标题中含“设计”，但实际上由于本站不能上传图纸（只能上传office+pdf格式），因此无图可下载。' },
+                { k: '计划书', m: '本文档含“计划书”，该文档有可能（不一定有）“只是广告文档，只有目录无实际可用内容”，请下载之前辨别。' },
+                { k: '报告', m: '本文档含“报告”，该文档有可能（不一定有）“只是广告文档，只有目录无实际可用内容”，请下载之前辨别。' },
+                { k: '可行性', m: '本文档含“可行性”，该文档有可能（不一定有）“只是广告文档，只有目录无实际可用内容”，请下载之前辨别。' },
+                { k: '答案', m: '本文档标题含“答案”，但实际上有可能（不一定有）“并没有答案”，请下载之前辨别是否有答案。' },
+                { k: year, m: '本文档含“'+year+'”字样，但是用户有可能（不一定有）篡改标题将以往的'+(+year-3)+'或'+(+year-4)+'修改为'+year+'，下载之前仔细辨别是否为“'+year+'”。' }
+            ];
+        for( var i = 0; i < cs.length; i++ ){
+            if( t.indexOf(cs[i].k) != -1 ){
+                m = cs[i].m;
+                break;
+            }
+        }
+        //是否BG标准文档 0 不是标准  1是标准
+        if ( +base.detail.status.stand === 1 ) {
+            m = '1. 标准文档要求电子版与印刷版保持一致，所以下载的文档中可能包含空白页，非文档质量问题。<br> 2. 本网站所提供的标准文本仅供个人学习、研究之用，未经授权，严禁复制、发行、汇编、翻译或网络传播等，侵权必究。<br> 3. 本网站所提供的标准均为PDF格式电子版文本（可阅读打印），因数字商品的特殊性，一经售出，不提供退换货服务。';
+        }
+        if( m != '' ){
+            $w.find('p').html(m);
+            $w.find('.btn-ok').on('click',function(){
+                $w.remove();
+            });
+            $('.layui-layer-pay .layui-layer-setwin').append($w);
+        }
+    },
+    /*
+    * 支付弹窗：游客下载
+    */
+    visitorLayer: function(refresh){
+        var that = this,
+            c = '<div class="pay-center">'+
+                    that.getInfo() + 
+                    '<div class="pay">'+
+                        that.getMoney() +
+                        that.getDiscounts()+
+                        '<div class="qrcode-picker" id="qrcode_picker"></div>'+
+                    '</div>'+
+                    '<div class="agree">扫码即表示接受<a href="/help6.html" title="下载须知" target="_blank">《下载须知》</a></div>'+
+                    '<ol class="notice">'+
+                        '<li>• 使用<strong>'+ that.getMethod(1) +'</strong>完成付费即可下载</li>'+
+                        '<li>• 购买成功后可使用'+ that.getMethod() +'登录，登录后可再次免费下载</li>'+
+                        '<li>• 如果您已付费，下载未成功或需要再次下载，请<a class="again" href="javascript:;" title="二次下载">[点击这里]</a></li>'+
+                        '<li>• 如果您已成功购买文档，需申请发票，请<a class="invoice" href="/college/category14/article667.html" target="_blank title="发票申请">[点击这里]</a></li>'+
+                    '</ol>'+
+                '</div>';
+        if( !refresh ){
+            layer.tab({
+                skin: 'layui-layer-tab layui-layer-rim layui-layer-pay',
+                area: '428px',
+                closeBtn: 1,
+                tab: [{
+                        title: '扫码快捷下载<em></em>',
+                        content: c
+                    },{
+                        title: '登录下载<em></em>',
+                        content: '<iframe src="'+__OPEN_HOST__+'/login/login/popindex.html" scrolling="no" frameborder="0" allowtransparency="true" style="width:100%;height:450px;"></iframe>'
+                }],
+                cancel: function(){
+                    if( qrcode_pay.status == 'scanned' ){
+                        that.cancelLayer();
+                        return false;
+                    }
+                }
+            });
+            that.setWarning();
+        }else{
+            $('.layui-layer-pay .pay-center').parent().html(c);
+        }
+        owa.load(['trackAction', 'layer_download_qrcode_visitor', 'pc']);
+        $('.layui-layer-pay .pay-center dl.info dt span').text(that.data.doc_infos.title);
+        setTimeout(function() {
+            that.setTag(); 
+            //埋点登录下载按钮点击
+            $('.layui-layer-pay .layui-layer-title > span').eq(1).on('click',function(){
+                owa.load(['trackAction', 'btn_layer_download_login', 'pc']);
+            });
+            that.qrcode({
+                scanned: function(){
+                    sm_cmd.push(['code','qrcode_success']);
+                },
+                success: function(pay_center_data){
+                    sm_cmd.push(['code','pay_success']);
+                    owa.load(['trackAction', 'layer_download_qrcode_success_visitor', 'pc']);
+                    pay_center_data.login = 0;
+                    operate_download_pay.success(pay_center_data); //执行成功后余额支付；
+                },
+                callback: function(){
+                    $('.layui-layer-pay .pay-center ol.notice a.again').on('click',function(){
+                        operate_download.data.type = 'DOWN';
+                        qrcode_pay.again();
+                    });
+                },
+                again: function(){
+                   operate_download_pay.againLayer();
+                },
+                cookie: true
+            });
+            auth._options.callback = function(){
+                layer.closeAll();
+                operate_download.init();
+                owa.load(['trackAction', 'layer_download_login_success', 'pc']);
+            };
+        }, 100);
+    },
+    /*
+    * 支付弹窗：登录用户下载，余额不足，充值扫码支付后发起余额支付扣款
+    */
+    rechargeLayer: function(refresh){
+        var that = this,
+            c = '<div class="pay-center">'+
+                    that.getInfo() + 
+                    '<div class="pay">'+
+                        that.getMoney() +
+                        '<div class="balance">账户余额：'+that.data.user_info.money+'金币</div>'+
+                        that.getDiscounts()+
+                        '<div class="need">还需支付金额：<strong>¥'+ that.getRmb(that.data.need_recharge_money) +'</strong>（'+that.data.need_recharge_money+'金币）</div>'+
+                        '<div class="qrcode-picker" id="qrcode_picker"></div>'+
+                        '<div class="agree">扫码即表示接受<a href="/help6.html" title="下载须知" target="_blank">《下载须知》</a></div>'+
+                        '<ol class="notice">'+
+                            '<li>• 使用<strong>'+ that.getMethod(1) +'</strong>完成付费即可下载</li>'+
+                            '<li>• 如果您已成功购买文档，需申请发票，请<a href="/college/category14/article667.html" target="_blank" title="发票申请">[点击这里]</a></li>'+
+                        '</ol>'+
+                    '</div>'+
+                '</div>';
+        if( !refresh ){
+            layer.tab({
+                skin: 'layui-layer-tab layui-layer-rim layui-layer-pay',
+                area: '428px',
+                closeBtn: 1,
+                tab: [{
+                    title: '文档下载<em></em>',
+                    content: c
+                }],
+                cancel: function(){
+                    if( qrcode_pay.status == 'scanned' ){
+                        that.cancelLayer();
+                        return false;
+                    }
+                }
+            });
+            that.setWarning();
+        }else{
+            $('.layui-layer-pay .pay-center').parent().html(c);
+        }
+        owa.load(['trackAction', 'layer_download_qrcode_recharge', 'pc']);
+        $('.layui-layer-pay .pay-center dl.info dt span').text(that.data.doc_infos.title);
+        setTimeout(function() {
+            that.setTag(); 
+            that.qrcode({
+                scanned: function(){
+                    sm_cmd.push(['code','qrcode_success']);
+                },
+                success: function(pay_center_data){
+                    sm_cmd.push(['code','pay_success']);
+                    owa.load(['trackAction', 'layer_download_qrcode_success_recharge', 'pc']);
+                    operate_download_pay.balancePost(pay_center_data); //执行成功后余额支付；
+                }
+            });
+        }, 100);
+    },
+    /*
+    * 支付弹窗：登录用户下载，余额充足
+    */
+    balanceLayer: function(refresh){
+        var that = this,
+            c = '<div class="pay-center">'+
+                    that.getInfo() + 
+                    '<div class="pay">'+
+                        that.getMoney() +
+                        '<div class="need">支付金额：<strong>¥'+ that.getRmb(that.data.price_infos.money_info.pay_money) +'</strong>（'+ that.data.price_infos.money_info.pay_money+'金币）</div>'+
+                        that.getDiscounts()+
+                        '<div class="enough"><button type="button" class="btn-sub" id="btn_enough_sub">确认下载本文档</button></div>'+
+                        '<ol class="notice">'+
+                            '<li>• 如果您已成功购买文档，需申请发票，请<a class="invoice" href="/college/category14/article667.html" target="_blank" title="发票申请">[点击这里]</a></li>'+
+                        '</ol>'+
+                    '</div>'+
+                '</div>';
+        if( !refresh ){
+            layer.tab({
+                skin: 'layui-layer-tab layui-layer-pay',
+                area: '428px',
+                closeBtn: 1,
+                tab: [{
+                    title: '文档下载',
+                    content: c
+                }]
+            });
+            that.setWarning();
+        }else{
+            $('.layui-layer-pay .pay-center').parent().html(c);
+        }
+        $('.layui-layer-pay .pay-center dl.info dt span').text(that.data.doc_infos.title);
+        setTimeout(function() {
+            that.setTag();
+            $('#btn_enough_sub').on('click',function(){
+                that.balancePost();
+            });
+        }, 100);
+    },
+    cancelLayer: function(){
+        var c = '<div class="warning"><i></i></div>'+
+                '<div class="tip">支付过程中请勿关闭支付弹窗，关闭支付弹窗可能导致<br><span>付款成功后文档下载失败</span></div>'+
+                '<div class="btns">'+
+                    '<button type="button" class="btn btn-sub">仍要关闭</button>'+
+                    '<button type="button" class="btn btn-cel">取消</button>'+
+                '</div>';
+        layer.open({
+            type: 1,
+            skin: 'layui-layer-confirm',
+            title: '提示',
+            area: '480px',
+            closeBtn: 1,
+            content : c,
+            success: function(layero,index){
+                layero.find('.btn-sub').on('click',function(){
+                    layer.closeAll();
+                });
+                layero.find('.btn-cel').on('click',function(){
+                    layer.close(index);
+                });
+            }
+        });
+    },
+    againLayer: function(){
+        var c = '<div class="clock"><i></i></div>'+
+                '<div class="tip">没有查询到已付费订单，如果您已付费下载未成功，可前往自助二次下载页输入商户订单号查询下载</div>'+
+                '<div class="btns">'+
+                    '<a href="//m.book118.com/down.shtm" class="btn btn-sub" target="_blank">自助下载</a>'+
+                    '<button type="button" class="btn btn-cel">返回继续支付</button>'+
+                '</div>';
+        layer.open({
+            type: 1,
+            skin: 'layui-layer-confirm',
+            title: '提示',
+            area: '480px',
+            closeBtn: 1,
+            content : c,
+            success: function(layero,index){
+                layero.find('.btn-sub,.btn-cel').on('click',function(){
+                    layer.close(index);
+                });
+            }
+        });
+        operate_download.data.type = 'PAY';
+    },
+    /*
+    * POST请求：余额支付执行扣款
+    */
+    balancePost: function(pay_center_data){
+        var that = this,
+            $btn = $('#btn_enough_sub');
+        pay_center_data = pay_center_data || {};
+        pay_center_data.login = 1;
+        $.ajax({
+            url: base.detail.url.download.balance,
+            method: 'POST',
+            data: {
+                aid: base.detail.aid,
+                trans_type: 'downs'
+            },
+            beforeSend: function(){
+                $btn.prop('disabled',true).addClass('disabled');
+            },
+            success: function ( res ) {
+                if( res.code == 200 ){
+                    pay_center_data.order_id = res.data.order_id;
+                    that.success(pay_center_data);
+                }else{
+                    layer.msg(res.message);
+                }
+            },
+            error: function(){
+                layer.msg('请求错误！');
+            },
+            complete: function(){
+                $btn.prop('disabled',false).removeClass('disabled');
+            }
+        });
+    },
+    /*
+    * 工具函数：生成二维码
+    */
+    qrcode: function(options){
+        var that = this,
+            doFun = function(){
+                qrcode_pay.init({
+                    picker: '#qrcode_picker',
+                    path: __PAY_HOST__ + '/static/qrcode/',
+                    create: {
+                        src: that.data.virtual_order_infos.virtual_order_url,
+                        method: that.data.pay_config
+                    },
+                    turning: {
+                        url: base.detail.url.download.turning, 
+                        data: {
+                            virtual_order_id: that.data.virtual_order_infos.virtual_order_id
+                        },
+                        scanned: options.scanned || function(){},
+                        delay: 3000, 
+                        expire: 10*60*1000
+                    },
+                    cookie: {
+                        status: options.cookie || false,
+                        name: 'QRCODE_DOWNLOAD_' + base.detail.aid,
+                        k: 'virtual_order_id', 
+                        v: that.data.virtual_order_infos.virtual_order_id
+                    },
+                    success: options.success, 
+                    refresh: function(){
+                        operate_download_pay.qrcodeRefresh();
+                    },
+                    again: options.again, 
+                    login: function(token){
+                        operate_download_pay.loginLayer(token);
+                    },
+                    callback: options.callback
+                });
+            };
+        if( typeof qrcode_pay == 'undefined' ){
+            util.load( __PAY_HOST__ + '/static/qrcode/pay.js?v=' + that.version,function(){
+                doFun();
+            });
+        }else{
+            doFun();
+        }
+    },
+    /*
+    * 回调函数：刷新二维码，比对code,状态码不对时直接唤起上面的下载按钮事件
+    */
+    qrcodeRefresh: function(){
+        var that = operate_download_pay,
+            refresh = true;
+        $.ajax({
+            url: base.detail.url.download.confirm,
+            method: 'GET',
+            data: {
+                aid: base.detail.aid,
+                trans_type: 'downs'
+            },
+            success: function ( res ) {
+                if( that.flag.code != res.code ){
+                    layer.closeAll();
+                    operate_download.init();
+                    member.header();
+                    return;
+                }
+                that.flag = res;
+                that.data = res.data || {};
+                switch(res.code){
+                    case 201:
+                        that.visitorLayer(refresh);
+                    break;
+                    case 202:
+                        that.rechargeLayer(refresh);
+                    break;
+                    case 203:
+                        that.balanceLayer(refresh);
+                    break;
+                    default:
+                        layer.msg(res.message);
+                        break;
+                }
+            },
+            error: function(){
+                layer.msg('请求错误！');
+            }
+        });
+    },
+    loginLayer: function(token){
+        layer.closeAll();
+        var c = '<div class="tip">您好，检测到对应账号上存在消费记录，为了避免重复消费，请重新下载！</div>'+
+                '<div class="btns">'+
+                    '<button type="button" class="btn btn-sub">我知道了</button>'+
+                '</div>';
+        layer.open({
+            type: 1,
+            skin: 'layui-layer-alert',
+            title: '提示',
+            area: '480px',
+            content : c,
+            success: function(layero, index){
+                layero.find('.btn-sub').on('click',function(){
+                    layer.close(index);
+                });
+            },
+            end: function(){
+                operate_download.init();
+            }
+        });
+        auth.callback({
+            status: 200,
+            datas: { must_token: true, token: token },
+            msg: "登录成功",
+            _options_callback: false
+        });
+    },
+    success: function(pay_center_data){
+        layer.closeAll();
+        operate_download.data.order_id = pay_center_data.order_id;
+        if( typeof pay_center_data.all_counts != 'undefined' || ( typeof pay_center_data.is_bind_mobile != 'undefined' && pay_center_data.is_bind_mobile == 0 ) || typeof pay_center_data.token != 'undefined' ){
+            operate_account.init(pay_center_data,operate_download.success,'down');
+        }else {
+            member.header();
+            operate_download.success();
+        }
+    }
+};
+var operate_download_own = {
+    init: function(data){
+        util.lazy( __HOME_ROOT__ + '/detail/js/download.own.js?v=20200714',function(){
+            operate_download_own.init(data);
+        },__HOME_ROOT__ + '/detail/css/download.own.css?v=20200714');
+    }
+};
+var operate_download_success = {
+    init: function(data){
+        util.lazy( __HOME_ROOT__ + '/detail/js/download.success.js?v=20210526',function(){
+            operate_download_success.init(data);
+        },__HOME_ROOT__ + '/detail/css/download.success.css?v=20210526');
+    }
+};

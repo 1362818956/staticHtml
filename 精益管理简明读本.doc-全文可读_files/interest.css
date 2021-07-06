@@ -1,0 +1,120 @@
+.interest{
+    padding: 20px 0;
+}
+.interest .bd{
+    position: relative;
+    padding: 10px 0  0 0;
+    overflow: hidden;
+}
+.interest .mask {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    z-index: 2021;
+    width: 100%;
+    height: 242px;
+}
+.interest .mask.gradient {
+    background:linear-gradient(rgba(255,255,255,0),rgba(255,255,255,1) 68%);
+}
+.interest .mask.gradient-bg img {
+    width: 100%;
+    height: 100%;
+}
+.interest ul.list{
+    padding: 0 13px;
+    overflow: hidden;
+}
+.interest ul.list li{
+    float: left;
+    width: 140px;
+    padding: 10px 0;
+    text-align: center;
+}
+.interest ul.list li.hide{
+    display: none;
+}
+.interest ul.list li a{
+    display: block; 
+    position: relative;
+    margin: 0 auto;
+    width: 120px;height: 218px;
+}
+.interest ul.list li a strong:hover{
+    text-decoration: underline;
+}
+.interest ul.list li small{
+    display: block;
+    position: absolute;
+    height: 24px;line-height: 24px;
+    font-size: 12px; color: #fff;
+    background-color: rgba(0,0,0, 0.5);
+}
+.interest ul.list li small.tag{
+    top: 5px;right: 5px;
+    z-index: 2020;
+    padding: 0 3px;
+    height: 20px;line-height: 20px;
+    border: 1px solid #458DEC;
+    border-radius: 3px;
+    background-color: #fff;
+    color: #458DEC;
+}
+.interest ul.list li small.page{
+    top: 1px;right: 1px;z-index: 2020;
+    padding: 0 6px;
+}
+.interest ul.list li small.son{
+    top: 151px;left: 1px;z-index: 2020;
+    padding: 0 6px;
+    width: 106px;
+    text-align: left;
+}
+@media \0screen\,screen\9 {
+    .interest ul.list li small{
+        background-color:#000;
+        filter:Alpha(opacity=50);
+        *zoom:1;
+    }
+}
+.interest ul.list li a i{
+    display: block;
+    padding: 104px 0 0 0;
+    width: 118px;height: 70px;line-height: 20px;
+    border: 1px solid #eee;
+    text-align: center;
+    font-size: 12px; font-style: normal;color: #999;
+}
+.interest ul.list li a span.cover {
+    display: inline-block;
+    width: 118px;height: 174px;
+    border:1px solid #eee;
+    overflow: hidden;
+}
+.interest ul.list li a span.cover img {
+    width:100%;height:100%;
+}
+.interest ul.list li a strong{
+    display: block;
+    padding: 6px 0 0 0;
+    height: 40px; line-height: 20px;
+    font-size: 12px;overflow: hidden;font-weight: 400;
+    text-align: left;
+}
+.interest .more{
+    position: absolute;
+    bottom: 20px;
+    z-index: 20211;
+    width: 100%;
+    height: 40px;
+    padding: 15px 0 0;
+    text-align: center;
+}
+.interest .more a.btn-more{
+    display: inline-block;
+    width: 128px; height: 38px;line-height: 38px;
+    border: 1px solid #458DEC;
+    border-radius: 3px;
+    text-align: center;
+    font-size: 14px; color: #458DEC;
+}

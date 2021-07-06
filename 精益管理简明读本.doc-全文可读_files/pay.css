@@ -1,0 +1,168 @@
+
+
+.qrcode-container{
+    margin: 0 auto;
+    position: relative;
+    border: 2px solid #458DEC;
+    border-radius: 6px;
+    width: 216px;height: 220px;
+    text-align: center;
+}
+.qrcode-container .loading{
+    display: none;
+    position: absolute;
+    z-index: 99;
+    top: 0;left: 0;
+    width: 216px;height: 220px;
+    border-radius: 4px;
+    background: #fff url(../images/loading.gif) no-repeat center center;
+}
+.qrcode-container .cavans{
+    padding: 16px 0 0;
+    width: 216px;height: 166px; 
+}
+.qrcode-container .cavans .img{
+    margin: 0 auto;
+    width: 166px;height: 166px;
+}
+.qrcode-container .cavans .tip{
+    height: 38px;line-height: 38px;
+    font-size: 14px;color: #666;
+}
+.qrcode-container .cavans .tip .icon-alipay,
+.qrcode-container .cavans .tip .icon-weixin{
+    display: inline-block;
+    width: 24px;height: 24px;
+    vertical-align: middle;
+    background-image: url(../images/icon/method.png);
+    background-repeat: no-repeat;
+}
+.qrcode-container .cavans .tip .icon-alipay{
+    background-position: 0 0;
+}
+.qrcode-container .cavans .tip .icon-weixin{
+    background-position: -25px 0;
+}
+.qrcode-container .expire{
+    display: none;
+    position: absolute;
+    z-index: 9;
+    top: 0;left: 0;
+    width: 216px;height: 100px;
+    padding: 60px 0;
+    border-radius: 4px;
+    background-color: rgba(0,0,0, 0.8);
+}
+@media \0screen\,screen\9 {
+    .qrcode-container .expire{
+        background-color:#000;
+        filter:Alpha(opacity=80);
+        *zoom:1;
+    }
+}
+.qrcode-container .expire span{
+    display: block;
+    height: 40px;line-height: 40px;
+    font-size: 14px; color: #fff;
+}
+.qrcode-container .expire a{
+    display: block;
+    margin: 0 auto;
+    width: 80px;height: 30px;line-height: 30px;
+    background-color: #2878FF;
+    border-radius: 3px;
+    font-size: 12px; color: #fff;
+    text-decoration: none;
+}
+.qrcode-container .scanned{
+    display: none;
+    position: absolute;
+    z-index: 9;
+    top: 0;left: 0;
+    padding: 30px 0;
+    width: 216px;height: 160px;
+    border-radius: 4px;
+    background-color: #fff;
+}
+.qrcode-container .scanned dl{
+    margin: 0;
+    padding: 6px 0;
+}
+.qrcode-container .scanned dl dt{
+    height: 20px;line-height: 20px;
+    font-size: 12px; color: #666;
+}
+.qrcode-container .scanned dl dt a{
+    color: #2878FF;
+    text-decoration: underline;
+}
+.qrcode-container .scanned dl dd{
+    margin: 0;
+    padding: 0;
+    height: 24px;line-height: 24px;
+    font-size: 12px; color: #111;
+}
+.qrcode-container .again{
+    display: none;
+    position: absolute;
+    z-index: 9;
+    bottom: -24px;left: 0;
+    width: 100%;height: 20px;line-height: 20px;
+    text-align: center;
+    color: #458DEC;
+}
+.qrcode-container .again i{
+    display: inline-block;
+    width: 16px; height: 16px;
+    background: url(../images/again.gif) no-repeat 0 0;
+    vertical-align: middle;
+}
+.layui-layer-pay-center-cancel .layui-layer-title{
+    height: 50px!important;
+    background: #fff!important;
+    filter: none!important;
+    border-bottom: 1px solid #fff!important;
+    font-size: 16px!important;color: #fff!important;
+}
+.layui-layer-pay-center-cancel .warning{
+    padding: 0 0 20px;
+    text-align: center;
+}
+.layui-layer-pay-center-cancel .warning i{
+    display: inline-block;
+    width: 60px;height: 60px;
+    background: url(../images/icon/warning.png) no-repeat 0 0;
+    vertical-align: middle;
+}
+.layui-layer-pay-center-cancel .tip{
+    padding: 0 30px;
+    line-height: 28px;
+    text-align: center;
+    font-size: 14px; color: #111;
+}
+.layui-layer-pay-center-cancel .tip span{
+    color: #FA0000;
+}
+.layui-layer-pay-center-cancel .btns{
+    text-align: center;
+    padding: 30px 0;
+    overflow: hidden;
+}
+.layui-layer-pay-center-cancel .btns .btn{
+    margin: 0 10px;
+    width: 108px; height: 42px;line-height: 42px;
+    border:1px solid #458DEC;
+    border-radius: 3px;
+    font-size: 14px; 
+    cursor: pointer;
+}
+.layui-layer-pay-center-cancel .btns .btn-sub{
+    background-color: #f5f5f5;
+    border:1px solid #ddd;
+    color: #999;
+}
+.layui-layer-pay-center-cancel .btns .btn-cel{
+    background-color: #458DEC;
+    border:1px solid #458DEC;
+    color: #fff;
+}
